@@ -1,0 +1,25 @@
+# Generated attendance tracker projects
+attendance_tracker_*/
+
+# Deployment archives
+*_archive.zip
+
+# Attendance logs
+*.log
+
+# Generated archive directories
+archives/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
