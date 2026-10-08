@@ -156,3 +156,145 @@ create_structure() {
     echo "Directory structure created."
 }
 
+copy_application_files() {
+    echo
+    echo "Deploying application files..."
+
+    cp "$TEMPLATE_DIR/attendance_checker.py" \
+        "$PROJECT_DIR/attendance_checker.py" ||
+        error_exit "Failed to deploy attendance_checker.py."
+
+    cp "$TEMPLATE_DIR/config.json" \
+        "$PROJECT_DIR/Helpers/config.json" ||
+        error_exit "Failed to deploy config.json."
+
+    chmod +x "$PROJECT_DIR/attendance_checker.py" ||
+        error_exit "Unable to make attendance_checker.py executable."
+
+    chmod 600 "$PROJECT_DIR/Helpers/config.json" ||
+        error_exit "Unable to restrict config.json permissions."
+
+    echo "attendance_checker.py permissions: executable"
+    echo "Helpers/config.json permissions: 600 (owner read/write only)"
+}
+
+build_roster_from_template() {
+    local count
+    local available
+
+    available=$(tail -n +2 "$TEMPLATE_DIR/assets.csv" | wc -l)
+
+    while true; do
+        read -r -p "How many students should be copied from the template? (1-$available): " count
+
+        if [[ "$count" =~ ^[0-9]+$ ]] &&
+           [ "$count" -ge 1 ] &&
+           [ "$count" -le "$available" ]; then
+            break
+        fi
+
+        echo "Please enter a number between 1 and $available."
+    done
+
+    {
+        head -n 1 "$TEMPLATE_DIR/assets.csv"
+        tail -n +2 "$TEMPLATE_DIR/assets.csv" | head -n "$count"
+    } > "$PROJECT_DIR/Helpers/assets.csv" ||
+        error_exit "Failed to create assets.csv."
+
+    # Template students already have four prior sessions.
+    # Therefore config total_sessions remains 5.
+    echo "Roster created from template."
+    echo "Prior sessions per template student: 4"
+    echo "config.json total_sessions: 5"
+}
+
+build_fresh_roster() {
+    local count
+    local i
+
+    local names=(
+        "Alice Johnson"
+        "Bob Smith"
+        "Charlie Brown"
+        "Diana Williams"
+        "Eric Davis"
+        "Faith Miller"
+        "Grace Wilson"
+        "Henry Moore"
+        "Irene Taylor"
+        "James Anderson"
+    )
+
+    local emails=(
+        "alice@example.com"
+        "bob@example.com"
+        "charlie@example.com"
+        "diana@example.com"
+        "eric@example.com"
+        "faith@example.com"
+        "grace@example.com"
+        "henry@example.com"
+        "irene@example.com"
+        "james@example.com"
+    )
+
+    while true; do
+        read -r -p "How many students should be in the fresh roster? (1-${#names[@]}): " count
+
+        if [[ "$count" =~ ^[0-9]+$ ]] &&
+           [ "$count" -ge 1 ] &&
+           [ "$count" -le "${#names[@]}" ]; then
+            break
+        fi
+
+        echo "Please enter a number between 1 and ${#names[@]}."
+    done
+
+    echo "Email,Names,Attendance Count,Absence Count" \
+        > "$PROJECT_DIR/Helpers/assets.csv" ||
+        error_exit "Failed to create assets.csv."
+
+    for ((i=0; i<count; i++)); do
+        echo "${emails[$i]},${names[$i]},0,0" \
+            >> "$PROJECT_DIR/Helpers/assets.csv" ||
+            error_exit "Failed while writing assets.csv."
+    done
+
+    # A fresh roster starts at session one.
+    # The template's default is 5 because its sample roster has
+    # four prior sessions, so update only total_sessions here.
+    sed -i -E 's/("total_sessions"[[:space:]]*:[[:space:]]*)[0-9]+/\11/' \
+        "$PROJECT_DIR/Helpers/config.json" ||
+        error_exit "Failed to set total_sessions to 1."
+
+    echo "Fresh roster created."
+    echo "Prior sessions: 0"
+    echo "config.json total_sessions: 1"
+}
+
+build_roster() {
+    echo
+    echo "Choose how to build the roster:"
+    echo "1) Copy students from templates/assets.csv"
+    echo "2) Generate a fresh roster"
+
+    while true; do
+        read -r -p "Choose option (1/2): " roster_option
+
+        case "$roster_option" in
+            1)
+                build_roster_from_template
+                break
+                ;;
+            2)
+                build_fresh_roster
+                break
+                ;;
+            *)
+                echo "Please choose 1 or 2."
+                ;;
+        esac
+    done
+}
+
