@@ -376,3 +376,76 @@ verify_permissions() {
     echo "Permission verification passed."
 }
 
+run_application_path() {
+    local target="$1"
+
+    [ -d "$target" ] ||
+        error_exit "Project directory does not exist: $target"
+
+    [ -f "$target/attendance_checker.py" ] ||
+        error_exit "attendance_checker.py not found."
+
+    [ -f "$target/Helpers/assets.csv" ] ||
+        error_exit "Helpers/assets.csv not found."
+
+    [ -f "$target/Helpers/config.json" ] ||
+        error_exit "Helpers/config.json not found."
+
+    cd "$target" ||
+        error_exit "Unable to enter project directory."
+
+    echo
+    echo "Starting Student Attendance Tracker..."
+    echo "Press Ctrl+C only if you want to stop the Python application."
+    echo
+
+    python3 attendance_checker.py
+
+    local status=$?
+
+    cd "$SCRIPT_DIR" || exit 1
+
+    return "$status"
+}
+
+deploy() {
+    echo
+    echo "=================================================="
+    echo "       STUDENT ATTENDANCE TRACKER DEPLOYMENT"
+    echo "=================================================="
+
+    preflight_checks
+    ask_project_name
+    create_structure
+    copy_application_files
+    build_roster
+    update_thresholds
+    verify_permissions
+
+    echo
+    echo "Deployment setup completed successfully."
+    echo "Project:"
+    echo "$PROJECT_DIR"
+
+    DEPLOYING=false
+
+    echo
+    echo "Starting the application to verify the deployment..."
+    run_application_path "$PROJECT_DIR"
+}
+
+run_existing() {
+    local input_name
+    local target
+
+    echo
+    read -r -p "Enter the project name suffix: " input_name
+
+    target="$SCRIPT_DIR/attendance_tracker_${input_name}"
+
+    [ -d "$target" ] ||
+        error_exit "Project not found: $target"
+
+    run_application_path "$target"
+}
+
