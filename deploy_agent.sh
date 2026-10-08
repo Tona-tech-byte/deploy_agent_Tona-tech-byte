@@ -298,3 +298,81 @@ build_roster() {
     done
 }
 
+valid_percentage() {
+    [[ "$1" =~ ^[0-9]+$ ]] && [ "$1" -ge 0 ] && [ "$1" -le 100 ]
+}
+
+update_thresholds() {
+    local answer
+    local warning
+    local failure
+
+    echo
+    read -r -p "Do you want to update the attendance alert thresholds? (y/n): " answer
+
+    case "$answer" in
+        y|Y)
+            while true; do
+                read -r -p "Warning threshold [75]: " warning
+
+                [ -z "$warning" ] && warning=75
+
+                if valid_percentage "$warning"; then
+                    break
+                fi
+
+                echo "Warning threshold must be a whole number from 0 to 100."
+            done
+
+            while true; do
+                read -r -p "Failure threshold [50]: " failure
+
+                [ -z "$failure" ] && failure=50
+
+                if valid_percentage "$failure"; then
+                    break
+                fi
+
+                echo "Failure threshold must be a whole number from 0 to 100."
+            done
+
+            sed -i -E \
+                "s/(\"warning\"[[:space:]]*:[[:space:]]*)[0-9]+/\1${warning}/" \
+                "$PROJECT_DIR/Helpers/config.json" ||
+                error_exit "Failed to update warning threshold."
+
+            sed -i -E \
+                "s/(\"failure\"[[:space:]]*:[[:space:]]*)[0-9]+/\1${failure}/" \
+                "$PROJECT_DIR/Helpers/config.json" ||
+                error_exit "Failed to update failure threshold."
+
+            echo "Thresholds updated:"
+            echo "  Warning: $warning"
+            echo "  Failure: $failure"
+            ;;
+
+        n|N)
+            echo "Keeping default thresholds."
+            ;;
+
+        *)
+            echo "Invalid answer. Keeping default thresholds."
+            ;;
+    esac
+}
+
+verify_permissions() {
+    echo
+    echo "Checking permissions..."
+
+    if [ ! -x "$PROJECT_DIR/attendance_checker.py" ]; then
+        error_exit "attendance_checker.py is not executable."
+    fi
+
+    if [ "$(stat -c '%a' "$PROJECT_DIR/Helpers/config.json")" != "600" ]; then
+        error_exit "config.json does not have permission 600."
+    fi
+
+    echo "Permission verification passed."
+}
+
