@@ -449,3 +449,103 @@ run_existing() {
     run_application_path "$target"
 }
 
+archive_logs() {
+    local input_name
+    local target
+    local timestamp
+    local attendance_source
+    local absent_source
+    local attendance_destination
+    local absent_destination
+    local found=false
+
+    echo
+    read -r -p "Enter the project name suffix: " input_name
+
+    target="$SCRIPT_DIR/attendance_tracker_${input_name}"
+
+    [ -d "$target" ] ||
+        error_exit "Project not found: $target"
+
+    attendance_source="$target/reports/attendance.log"
+    absent_source="$target/reports/absent.log"
+
+    timestamp=$(date '+%Y%m%d_%H%M%S')
+
+    mkdir -p "$target/archives/attendance" \
+             "$target/archives/absent" ||
+        error_exit "Unable to create archive directories."
+
+    if [ -f "$attendance_source" ]; then
+        attendance_destination="$target/archives/attendance/attendance_${timestamp}.log"
+
+        cp "$attendance_source" "$attendance_destination" ||
+            error_exit "Failed to archive attendance.log."
+
+        echo "Archived attendance.log:"
+        echo "$attendance_destination"
+        found=true
+    else
+        echo "attendance.log not found. Nothing to archive for attendance."
+    fi
+
+    if [ -f "$absent_source" ]; then
+        absent_destination="$target/archives/absent/absent_${timestamp}.log"
+
+        cp "$absent_source" "$absent_destination" ||
+            error_exit "Failed to archive absent.log."
+
+        echo "Archived absent.log:"
+        echo "$absent_destination"
+        found=true
+    else
+        echo "absent.log not found. This is okay if nobody was absent."
+    fi
+
+    if [ "$found" = false ]; then
+        echo "No log files were available for archival."
+    else
+        echo "Log archival completed."
+    fi
+}
+
+show_menu() {
+    echo
+    echo "=================================================="
+    echo "       STUDENT ATTENDANCE DEPLOYMENT AGENT"
+    echo "=================================================="
+    echo "1) Deploy application"
+    echo "2) Run application"
+    echo "3) Archive logs"
+    echo "4) Exit"
+    echo "=================================================="
+}
+
+main() {
+    while true; do
+        show_menu
+
+        read -r -p "Select an option (1-4): " choice
+
+        case "$choice" in
+            1)
+                deploy
+                ;;
+            2)
+                run_existing
+                ;;
+            3)
+                archive_logs
+                ;;
+            4)
+                echo "Goodbye."
+                exit 0
+                ;;
+            *)
+                echo "Invalid option. Please choose 1, 2, 3, or 4."
+                ;;
+        esac
+    done
+}
+
+main
