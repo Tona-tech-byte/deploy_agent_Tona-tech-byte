@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Automated Student Attendance Tracker deployment agent
 
 set -u
 
@@ -8,10 +7,6 @@ TEMPLATE_DIR="$SCRIPT_DIR/templates"
 
 PROJECT_DIR=""
 DEPLOYING=false
-
-# ------------------------------------------------------------
-# Signal handling
-# ------------------------------------------------------------
 
 handle_interrupt() {
     local signal="$1"
@@ -49,10 +44,6 @@ handle_interrupt() {
 
 trap 'handle_interrupt SIGINT' SIGINT
 trap 'handle_interrupt SIGTSTP' SIGTSTP
-
-# ------------------------------------------------------------
-# Utility functions
-# ------------------------------------------------------------
 
 error_exit() {
     echo "ERROR: $1"
@@ -202,8 +193,6 @@ build_roster_from_template() {
     } > "$PROJECT_DIR/Helpers/assets.csv" ||
         error_exit "Failed to create assets.csv."
 
-    # Template students already have four prior sessions.
-    # Therefore config total_sessions remains 5.
     echo "Roster created from template."
     echo "Prior sessions per template student: 4"
     echo "config.json total_sessions: 5"
@@ -261,9 +250,6 @@ build_fresh_roster() {
             error_exit "Failed while writing assets.csv."
     done
 
-    # A fresh roster starts at session one.
-    # The template's default is 5 because its sample roster has
-    # four prior sessions, so update only total_sessions here.
     sed -i -E 's/("total_sessions"[[:space:]]*:[[:space:]]*)[0-9]+/\11/' \
         "$PROJECT_DIR/Helpers/config.json" ||
         error_exit "Failed to set total_sessions to 1."
